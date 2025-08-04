@@ -1,30 +1,5 @@
 #! /bin/bash
 
-currentdir=$(
-	cd $(dirname $0)
-	pwd
-)
-source $currentdir/bin/st_geometry
-
-close_music() {
-	ncmpcpp_pid=$(ps -u $USER -o pid,comm | grep 'ncmpcpp' | awk '{print $1}')
-	mpd_pid=$(ps -u $USER -o pid,comm | grep 'mpd' | awk '{print $1}')
-	cava_pid=$(ps -u $USER -o pid,comm | grep 'cava' | awk '{print $1}')
-	killed=1
-	if [ "$ncmpcpp_pid" ]; then
-		kill -9 $ncmpcpp_pid
-		killed=0
-	fi
-	if [ "$mpd_pid" ]; then
-		kill -9 $mpd_pid
-		killed=0
-	fi
-	if [ "$cava_pid" ]; then
-		kill -9 $cava_pid
-		killed=0
-	fi
-	return $killed
-}
 # mpd: 这是音乐播放器守护进程（Music Player Daemon）的命令，用于启动MPD音乐服务器。
 
 # st: 这是一个终端仿真器（Terminal Emulator），可能是指的Suckless简洁终端。该命令用于打开终端并运行后续的命令。
@@ -47,7 +22,43 @@ close_music() {
 
 # -e cava: 在这个终端中运行cava音乐可视化器。
 
+currentdir=$(
+	cd $(dirname $0)
+	pwd
+)
+source $currentdir/bin/st_geometry
+
+is_listen1_running() {
+	pgrep -x "listen1" >/dev/null 2>&1 && return 0 || return 1
+}
+
+close_music() {
+	ncmpcpp_pid=$(ps -u $USER -o pid,comm | grep 'ncmpcpp' | awk '{print $1}')
+	mpd_pid=$(ps -u $USER -o pid,comm | grep 'mpd' | awk '{print $1}')
+	cava_pid=$(ps -u $USER -o pid,comm | grep 'cava' | awk '{print $1}')
+	killed=1
+	if [ "$ncmpcpp_pid" ]; then
+		kill -9 $ncmpcpp_pid
+		killed=0
+	fi
+	if [ "$mpd_pid" ]; then
+		kill -9 $mpd_pid
+		killed=0
+	fi
+	if [ "$cava_pid" ]; then
+		kill -9 $cava_pid
+		killed=0
+	fi
+	return $killed
+}
+
 open_music() {
+	# 新增判断：如果listen1 正在运行，则退出
+	if is_listen1_running; then
+		echo "listen1 is running, exit"
+		exit 0
+	fi
+
 	mpd
 	st -g $(st_geometry top_right 50 10) -A 0.7 -t music -c FN -e 'ncmpcpp' &
 	st -A 0.7 -c FN -g $(st_geometry top_left 40 10 -100 -50 -1) -e cava &
